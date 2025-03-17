@@ -7,73 +7,66 @@ import { useEffect, useState } from "react";
 
 export default function Home() {
 	const [posts, setPosts] = useState<IPost[] | []>([]);
+	const [filteredPosts, setFilteredPosts] = useState<IPost[] | []>([]);
+
 	const [titleSort, setTitleSort] = useState<boolean>(true);
 	const [userIDSort, setUserIDSort] = useState<boolean>(false);
+
 	const [filterByUserID, setFilterByUserID] = useState<number>(0);
 
-	useEffect(() => {
-		const filteredPosts = posts.filter(
-			(post) => post.userId == filterByUserID
-		);
-		setPosts([...filteredPosts]);
-	}, [filterByUserID]);
+	const [searchTerm, setSearchTerm] = useState<string>("");
 
 	useEffect(() => {
 		async function fetchData() {
 			const res = await fetch(
 				"https://jsonplaceholder.typicode.com/posts"
 			);
-
 			const data = await res.json();
-
 			setPosts(data);
+			setFilteredPosts(data);
 		}
 
 		fetchData();
 	}, []);
 
-	function handleSortByTitle() {
-		if (titleSort) {
-			const sortedPosts = posts.sort((a, b) =>
-				a.title.localeCompare(b.title)
-			);
-			setPosts([...sortedPosts]);
-			setTitleSort(false);
-		} else {
-			const sortedPosts = posts.sort((a, b) =>
-				b.title.localeCompare(a.title)
-			);
-			setPosts([...sortedPosts]);
-			setTitleSort(true);
+	useEffect(() => {
+		let filtered = posts;
+		if (filterByUserID !== 0) {
+			filtered = posts.filter((post) => post.userId === filterByUserID);
 		}
+
+		if (searchTerm) {
+			filtered = filtered.filter((post) =>
+				post.title.toLowerCase().includes(searchTerm.toLowerCase())
+			);
+		}
+
+		setFilteredPosts(filtered);
+	}, [filterByUserID, searchTerm, posts]);
+
+	function handleSortByTitle() {
+		const sortedPosts = [...filteredPosts].sort((a, b) =>
+			titleSort
+				? a.title.localeCompare(b.title)
+				: b.title.localeCompare(a.title)
+		);
+		setFilteredPosts(sortedPosts);
+		setTitleSort(!titleSort);
 	}
 
 	function handleSortByUserID() {
-		if (userIDSort) {
-			const sortedPosts = posts.sort((a, b) => a.userId - b.userId);
-			setPosts([...sortedPosts]);
-			setUserIDSort(false);
-		} else {
-			const sortedPosts = posts.sort((a, b) => b.userId - a.userId);
-			setPosts([...sortedPosts]);
-			setUserIDSort(true);
-		}
-	}
-
-	function handleSearchByTitle(e: React.ChangeEvent<HTMLInputElement>) {
-		const target = e.target as HTMLInputElement;
-		const searchTerm = target.value;
-		const filteredPosts = posts.filter((post) =>
-			post.title.includes(searchTerm)
+		const sortedPosts = [...filteredPosts].sort((a, b) =>
+			userIDSort ? a.userId - b.userId : b.userId - a.userId
 		);
-		setPosts([...filteredPosts]);
+		setFilteredPosts(sortedPosts);
+		setUserIDSort(!userIDSort);
 	}
 
 	return (
-		<div>
-			<div className='flex justify-center items-center gap-3'>
-				<Button text='Short By Title' onClick={handleSortByTitle} />
-				<Button text='Short By UserID' onClick={handleSortByUserID} />
+		<div className='space-y-4'>
+			<div className='flex justify-center items-center gap-5 py-4'>
+				<Button text='Sort By Title' onClick={handleSortByTitle} />
+				<Button text='Sort By UserID' onClick={handleSortByUserID} />
 
 				<select
 					name='userIDFilter'
@@ -84,26 +77,24 @@ export default function Home() {
 					}
 				>
 					<option value={0}>None</option>
-					<option value={1}>1</option>
-					<option value={2}>2</option>
-					<option value={3}>3</option>
-					<option value={4}>4</option>
-					<option value={5}>5</option>
-					<option value={6}>6</option>
-					<option value={7}>7</option>
-					<option value={8}>8</option>
-					<option value={9}>9</option>
-					<option value={10}>10</option>
+					{[...Array(10).keys()].map((i) => (
+						<option key={i + 1} value={i + 1}>
+							{i + 1}
+						</option>
+					))}
 				</select>
 
 				<input
 					type='text'
-					onChange={handleSearchByTitle}
+					onChange={(e) => setSearchTerm(e.target.value)}
+					value={searchTerm}
 					placeholder='Search by Title'
+					className='border-2 border-black p-2 rounded-md hover:border-emerald-600 transition-transform duration-500'
 				/>
 			</div>
-			<div className='border-2 border-red-500 flex flex-wrap gap-4 p-4 justify-center'>
-				{posts.map((post: IPost) => (
+
+			<div className='flex flex-wrap gap-4 p-4 justify-center'>
+				{filteredPosts.map((post: IPost) => (
 					<Post key={post.id} data={post} />
 				))}
 			</div>
